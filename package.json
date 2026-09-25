@@ -1,0 +1,30 @@
+{
+  "name": "one-story",
+  "version": "1.0.0",
+  "description": "一个故事",
+  "main": "main.js",
+  "author": "you",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.example.onestory",
+    "productName": "一个故事",
+    "files": ["index.html", "main.js"],
+    "win": {
+      "target": "nsis",
+      "icon": "icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "一个故事"
+    }
+  }
+}

@@ -1,0 +1,3042 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>一个故事</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --gold: #b08d3f;
+    --gold-light: #e8c86a;
+    --gold-dim: rgba(176, 141, 63, .35);
+    --text: #e6dbc6;
+    --text-dim: #9c8f78;
+  }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: #0d0a08;
+    color: var(--text);
+    font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", "SimSun", serif;
+    user-select: none;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #app {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background:
+      radial-gradient(ellipse at 50% -10%, rgba(176, 141, 63, .12), transparent 55%),
+      #0d0a08;
+  }
+
+  .topbar {
+    height: 58px;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    border-bottom: 1px solid var(--gold-dim);
+    background: linear-gradient(180deg, rgba(176, 141, 63, .10), transparent);
+  }
+  .topbar .title {
+    font-size: 17px;
+    letter-spacing: .42em;
+    color: var(--gold-light);
+    text-shadow: 0 0 18px rgba(232, 200, 106, .35);
+    text-indent: .42em;
+  }
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .topbar .day {
+    font-size: 14px;
+    letter-spacing: .2em;
+    color: var(--gold);
+    padding: 5px 16px;
+    border: 1px solid var(--gold-dim);
+    border-radius: 3px;
+    background: rgba(176, 141, 63, .07);
+  }
+  .topbar .day span { color: var(--gold-light); font-weight: 700; }
+
+  .map {
+    flex: 1 1 auto;
+    min-height: 190px;
+    position: relative;
+    overflow: hidden;
+    background-image:
+      radial-gradient(circle at 18% 26%, rgba(176, 141, 63, .07), transparent 42%),
+      radial-gradient(circle at 82% 72%, rgba(176, 141, 63, .055), transparent 46%),
+      repeating-linear-gradient(0deg, rgba(176, 141, 63, .05) 0 1px, transparent 1px 62px),
+      repeating-linear-gradient(90deg, rgba(176, 141, 63, .05) 0 1px, transparent 1px 62px);
+  }
+  .map::before, .map::after {
+    content: '';
+    position: absolute;
+    width: 54px; height: 54px;
+    border: 1px solid rgba(176, 141, 63, .28);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .map::before { left: 18px; top: 18px; border-right: none; border-bottom: none; }
+  .map::after  { right: 18px; bottom: 18px; border-left: none; border-top: none; }
+
+  .event-node {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    padding: 15px 26px;
+    border-radius: 8px;
+    border: 2px solid var(--gold);
+    background: linear-gradient(160deg, rgba(176,141,63,.30), rgba(22,16,12,.95));
+    cursor: pointer;
+    z-index: 5;
+    transition: transform .22s ease, box-shadow .22s ease, border-color .3s;
+    box-shadow: 0 0 22px rgba(176,141,63,.26);
+    animation: nodePulse 2.8s ease-in-out infinite;
+  }
+  .event-node .node-name {
+    font-size: 16px;
+    letter-spacing: .2em;
+    text-indent: .2em;
+    color: var(--gold-light);
+    white-space: nowrap;
+    transition: color .3s;
+  }
+  .event-node:hover {
+    transform: translate(-50%, -50%) scale(1.07);
+    box-shadow: 0 0 40px rgba(232, 200, 106, .5);
+  }
+
+  .event-node .countdown {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    min-width: 26px;
+    height: 26px;
+    padding: 0 6px;
+    border-radius: 13px;
+    background: #7a1a1a;
+    border: 1px solid #e05050;
+    color: #ffd0d0;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 14px rgba(220, 70, 70, .55), inset 0 0 8px rgba(0, 0, 0, .5);
+    z-index: 7;
+  }
+  .event-node .countdown.pulse { animation: countPulse .5s ease; }
+  @keyframes countPulse {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.35); }
+    100% { transform: scale(1); }
+  }
+
+  .event-node.done {
+    animation: none;
+    border-color: rgba(150, 205, 150, .75);
+    background: linear-gradient(160deg, rgba(100,160,100,.26), rgba(22,16,12,.95));
+    box-shadow: 0 0 22px rgba(120, 190, 120, .3);
+  }
+  .event-node.done .node-name { color: #bde5b4; }
+  .event-node.done:hover { box-shadow: 0 0 42px rgba(150, 220, 150, .55); }
+
+  @keyframes nodePulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(176, 141, 63, .40), 0 0 22px rgba(176, 141, 63, .22); }
+    50%      { box-shadow: 0 0 0 13px rgba(176, 141, 63, 0), 0 0 36px rgba(176, 141, 63, .46); }
+  }
+
+  .map-dim {
+    position: absolute;
+    inset: 0;
+    background: rgba(8, 6, 5, .68);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .24s ease;
+    z-index: 10;
+  }
+  .map-dim.open { opacity: 1; }
+
+  .modal {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%) scale(.94);
+    width: min(620px, 94vw);
+    background: linear-gradient(180deg, #2c2219, #191310);
+    border: 1px solid var(--gold);
+    border-radius: 10px;
+    box-shadow:
+      0 30px 80px rgba(0, 0, 0, .85),
+      inset 0 0 0 1px rgba(232, 200, 106, .12),
+      0 0 60px rgba(176, 141, 63, .16);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .24s ease, transform .24s ease;
+    z-index: 20;
+  }
+  .modal.open {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(176, 141, 63, .28);
+    color: var(--gold-light);
+    font-size: 15px;
+    letter-spacing: .24em;
+    text-indent: .24em;
+  }
+  .modal-close {
+    width: 26px; height: 26px;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent;
+    border: 1px solid rgba(176, 141, 63, .35);
+    border-radius: 3px;
+    color: var(--text-dim);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all .18s;
+    font-family: inherit;
+  }
+  .modal-close:hover {
+    color: var(--gold-light);
+    border-color: var(--gold);
+    background: rgba(176, 141, 63, .14);
+  }
+
+  .modal-body {
+    padding: 26px 24px;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    gap: 24px;
+    min-height: 220px;
+  }
+
+  .slot-column {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 18px;
+    align-items: flex-start;
+  }
+  .slot-column.slot-column-2x2 {
+    display: grid;
+    grid-template-columns: repeat(2, auto);
+    gap: 18px;
+    align-items: start;
+    justify-items: center;
+  }
+  .slot-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .slot-label {
+    font-size: 11px;
+    letter-spacing: .3em;
+    text-indent: .3em;
+    color: var(--gold);
+    opacity: .9;
+  }
+
+  .slot-text {
+    flex: 1 1 auto;
+    max-width: 280px;
+    font-size: 14px;
+    line-height: 2;
+    letter-spacing: .08em;
+    color: var(--text);
+    padding-left: 20px;
+    border-left: 1px solid rgba(176, 141, 63, .32);
+    text-align: left;
+    overflow-y: auto;
+    max-height: 180px;
+    padding-right: 6px;
+    cursor: grab;
+    white-space: pre-line;
+  }
+  .slot-text::-webkit-scrollbar { width: 4px; }
+  .slot-text::-webkit-scrollbar-thumb { background: rgba(176,141,63,.4); border-radius: 2px; }
+  .slot-text.dragging-scroll { cursor: grabbing; }
+
+  .modal-footer {
+    padding: 16px 20px 20px;
+    display: flex;
+    justify-content: flex-end;
+    border-top: 1px solid rgba(176, 141, 63, .18);
+  }
+
+  .slot {
+    width: 108px; height: 148px;
+    flex: 0 0 auto;
+    border: 2px dashed rgba(176, 141, 63, .5);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, .28);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all .18s ease;
+    position: relative;
+  }
+  .slot .slot-hint {
+    font-size: 12px;
+    letter-spacing: .18em;
+    text-indent: .18em;
+    color: var(--text-dim);
+  }
+  .slot.over {
+    border-color: var(--gold-light);
+    background: rgba(176, 141, 63, .16);
+    box-shadow: inset 0 0 26px rgba(232, 200, 106, .35), 0 0 22px rgba(232, 200, 106, .28);
+  }
+  .slot.over.invalid {
+    border-color: rgba(220, 90, 90, .8);
+    background: rgba(120, 30, 30, .22);
+    box-shadow: inset 0 0 26px rgba(220, 90, 90, .3), 0 0 22px rgba(220, 90, 90, .25);
+  }
+  .slot.filled {
+    border-style: solid;
+    border-color: var(--gold);
+    box-shadow: 0 0 22px rgba(176, 141, 63, .3);
+  }
+  .slot.locked {
+    border-color: rgba(150, 205, 150, .7);
+    background: rgba(60, 100, 60, .18);
+    box-shadow: 0 0 22px rgba(120, 190, 120, .3), inset 0 0 26px rgba(0, 0, 0, .4);
+  }
+  .slot.required-empty {
+    border-color: rgba(176, 141, 63, .5);
+    background: rgba(0, 0, 0, .28);
+    box-shadow: inset 0 0 22px rgba(200, 60, 60, .32);
+  }
+  .slot.required-empty .slot-hint {
+    color: #c89090;
+  }
+  .slot.absent .slot-hint {
+    color: rgba(176, 141, 63, .55);
+    font-style: italic;
+  }
+
+  .card {
+    position: relative;
+    width: 96px; height: 134px;
+    flex: 0 0 auto;
+    border-radius: 7px;
+    border: 2px solid var(--gold);
+    background: linear-gradient(160deg, #33281c, #1b1410 58%, #241a12);
+    box-shadow: 0 0 14px rgba(176, 141, 63, .32), inset 0 0 24px rgba(0, 0, 0, .72);
+    cursor: grab;
+    transition: transform .18s ease, box-shadow .18s ease, opacity .22s ease, filter .22s, outline .12s;
+  }
+  .card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 8px 24px rgba(176, 141, 63, .5), inset 0 0 24px rgba(0, 0, 0, .72);
+  }
+  .card.dragging { opacity: .3; }
+
+  .card.drop-target {
+    outline: 2px solid var(--gold-light);
+    outline-offset: 2px;
+  }
+  .card.merge-target {
+    outline: 2px solid #8fd080;
+    outline-offset: 2px;
+  }
+
+  .card.card-gold {
+    border-color: #e8c86a;
+    box-shadow:
+      0 0 20px rgba(232, 200, 106, .5),
+      0 0 46px rgba(232, 200, 106, .16),
+      inset 0 0 26px rgba(0, 0, 0, .7);
+  }
+  .card.card-gold::before {
+    content: '';
+    position: absolute;
+    top: -3px; left: 50%;
+    transform: translateX(-50%);
+    width: 46%; height: 3px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, transparent, #ffd970, transparent);
+  }
+
+  .card-inner {
+    position: absolute;
+    inset: 4px;
+    border: 1px solid rgba(232, 200, 106, .42);
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+  }
+  .card-name {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--gold-light);
+    text-shadow: 0 0 16px rgba(232, 200, 106, .7);
+    white-space: nowrap;
+  }
+  .card-gold .card-name {
+    color: #ffe9a8;
+    text-shadow: 0 0 18px rgba(255, 220, 130, .95);
+  }
+  .card-type {
+    font-size: 10px;
+    letter-spacing: .24em;
+    text-indent: .24em;
+    color: var(--text-dim);
+    padding: 3px 7px;
+    border-top: 1px solid rgba(176, 141, 63, .38);
+    border-bottom: 1px solid rgba(176, 141, 63, .38);
+  }
+
+  .stack-count {
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 11px;
+    background: rgba(20, 14, 10, .94);
+    border: 1px solid var(--gold);
+    color: var(--gold-light);
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 4;
+    transition: all .18s;
+  }
+  .stack-count:hover {
+    background: rgba(176, 141, 63, .38);
+    color: #fff5d8;
+    box-shadow: 0 0 14px rgba(232, 200, 106, .5);
+  }
+
+  .card.used {
+    opacity: .26;
+    filter: grayscale(1);
+    cursor: not-allowed;
+  }
+  .card.used:hover { transform: none; box-shadow: 0 0 14px rgba(176, 141, 63, .2); }
+
+  .slot .card { cursor: pointer; }
+  .slot .card:hover { transform: none; }
+  .slot.locked .card { cursor: default; }
+
+  .btn {
+    font-family: inherit;
+    font-size: 14px;
+    letter-spacing: .3em;
+    text-indent: .3em;
+    padding: 10px 28px;
+    color: var(--gold-light);
+    background: linear-gradient(180deg, rgba(176, 141, 63, .3), rgba(176, 141, 63, .08));
+    border: 1px solid var(--gold);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all .2s ease;
+  }
+  .btn:hover:not(:disabled) {
+    background: linear-gradient(180deg, rgba(232, 200, 106, .45), rgba(176, 141, 63, .18));
+    box-shadow: 0 0 24px rgba(232, 200, 106, .42);
+    color: #fff5d8;
+  }
+  .btn:active:not(:disabled) { transform: translateY(1px); }
+  .btn:disabled {
+    opacity: .3;
+    cursor: not-allowed;
+    filter: grayscale(.6);
+    pointer-events: none;
+  }
+  .btn.done {
+    border-color: rgba(140, 200, 140, .55);
+    color: #b9e2b2;
+    background: linear-gradient(180deg, rgba(90, 150, 90, .26), rgba(60, 100, 60, .1));
+    opacity: 1;
+    filter: none;
+  }
+
+  .bottom-area {
+    flex: 0 0 auto;
+    height: 192px;
+    display: flex;
+    border-top: 1px solid var(--gold-dim);
+    background: #140f0c;
+  }
+
+  .chronicle {
+    width: 300px;
+    flex: 0 0 auto;
+    border-right: 1px solid var(--gold-dim);
+    background: #100c09;
+    padding: 11px 14px 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .chronicle-title {
+    font-size: 11px;
+    letter-spacing: .5em;
+    text-indent: .5em;
+    color: var(--gold);
+    opacity: .85;
+    flex: 0 0 auto;
+  }
+  .chronicle-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding-right: 6px;
+    cursor: grab;
+  }
+  .chronicle-body::-webkit-scrollbar { width: 4px; }
+  .chronicle-body::-webkit-scrollbar-thumb {
+    background: rgba(176, 141, 63, .4);
+    border-radius: 2px;
+  }
+  .chronicle-body.dragging-scroll { cursor: grabbing; }
+
+  .log-item {
+    font-size: 13px;
+    line-height: 1.9;
+    letter-spacing: .06em;
+    color: var(--text);
+    animation: fadeUp .5s ease both;
+  }
+  .log-item::before {
+    content: '◆';
+    font-size: 8px;
+    color: var(--gold);
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+  .log-item.accent { color: #bde5b4; }
+  .log-item.accent::before { color: #8fd080; }
+  .log-item.warn { color: #e0a0a0; }
+  .log-item.warn::before { color: #d06060; }
+
+  .log-date {
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: .5em;
+    text-indent: .5em;
+    color: var(--gold);
+    margin: 12px 0 5px;
+    opacity: .9;
+    animation: fadeUp .5s ease both;
+  }
+  .log-date:first-child { margin-top: 0; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(9px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .hand-area {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    padding: 0 230px 0 36px;
+    background: linear-gradient(0deg, rgba(176, 141, 63, .09), transparent 72%);
+    overflow: hidden;
+  }
+  .hand-label {
+    font-size: 11px;
+    letter-spacing: .42em;
+    text-indent: .42em;
+    color: var(--gold);
+    opacity: .85;
+    writing-mode: vertical-rl;
+    height: 62px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .hand {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-height: 140px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 4px;
+    cursor: grab;
+  }
+  .hand.dragging-scroll { cursor: grabbing; }
+  .hand::-webkit-scrollbar { height: 6px; }
+  .hand::-webkit-scrollbar-thumb { background: rgba(176,141,63,.4); border-radius: 3px; }
+  .hand::-webkit-scrollbar-track { background: transparent; }
+
+  .btn-next-day {
+    position: fixed;
+    right: 34px;
+    bottom: 34px;
+    z-index: 300;
+    padding: 13px 32px;
+    font-size: 15px;
+  }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 250px;
+    transform: translateX(-50%) translateY(12px);
+    padding: 11px 24px;
+    background: rgba(22, 16, 11, .96);
+    border: 1px solid var(--gold);
+    border-radius: 6px;
+    color: var(--gold-light);
+    font-size: 13.5px;
+    letter-spacing: .1em;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .3s ease, transform .3s ease;
+    box-shadow: 0 10px 34px rgba(0, 0, 0, .7), 0 0 26px rgba(176, 141, 63, .2);
+    z-index: 400;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .intro-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 3, 2, .9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .4s ease;
+  }
+  .intro-overlay.open { opacity: 1; pointer-events: auto; }
+  .intro-modal {
+    position: relative;
+    width: min(560px, 90vw);
+    background: linear-gradient(180deg, #2c2219, #191310);
+    border: 1px solid var(--gold);
+    border-radius: 12px;
+    box-shadow:
+      0 40px 100px rgba(0, 0, 0, .9),
+      0 0 80px rgba(176, 141, 63, .2),
+      inset 0 0 0 1px rgba(232, 200, 106, .1);
+    padding: 48px 44px 44px;
+    text-align: center;
+    transform: scale(.94);
+    transition: transform .4s cubic-bezier(.2, .9, .3, 1.2);
+  }
+  .intro-overlay.open .intro-modal { transform: scale(1); }
+  .intro-close {
+    position: absolute;
+    top: 14px; right: 14px;
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent;
+    border: 1px solid rgba(176, 141, 63, .4);
+    border-radius: 4px;
+    color: var(--text-dim);
+    font-size: 14px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all .2s;
+  }
+  .intro-close:hover {
+    color: var(--gold-light);
+    border-color: var(--gold);
+    background: rgba(176, 141, 63, .15);
+  }
+  .intro-title {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: .5em;
+    text-indent: .5em;
+    color: var(--gold-light);
+    text-shadow: 0 0 24px rgba(232, 200, 106, .4);
+    margin-bottom: 22px;
+  }
+  .intro-divider {
+    width: 60%; height: 1px;
+    margin: 0 auto 26px;
+    background: linear-gradient(90deg, transparent, rgba(176, 141, 63, .6), transparent);
+  }
+  .intro-text {
+    font-size: 16px;
+    line-height: 2.2;
+    letter-spacing: .12em;
+    color: var(--text);
+    text-align: left;
+    white-space: pre-line;
+    text-indent: 0;
+  }
+
+  .guide-tip {
+    position: fixed;
+    z-index: 800;
+    padding: 10px 18px;
+    background: rgba(22, 16, 11, .97);
+    border: 1px solid var(--gold);
+    border-radius: 6px;
+    color: var(--gold-light);
+    font-size: 13.5px;
+    letter-spacing: .1em;
+    white-space: nowrap;
+    box-shadow: 0 10px 34px rgba(0, 0, 0, .7), 0 0 26px rgba(176, 141, 63, .25);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .25s ease;
+    max-width: 340px;
+    white-space: normal;
+    line-height: 1.7;
+    text-align: center;
+  }
+  .guide-tip.show { opacity: 1; }
+
+  .warn-popup {
+    position: fixed;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%) scale(.9);
+    z-index: 900;
+    padding: 14px 28px;
+    background: rgba(40, 22, 18, .97);
+    border: 1px solid rgba(200, 120, 80, .7);
+    border-radius: 6px;
+    color: #f0c8a8;
+    font-size: 14px;
+    letter-spacing: .12em;
+    white-space: nowrap;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, .8), 0 0 30px rgba(200, 120, 80, .25);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .15s ease, transform .15s ease;
+  }
+  .warn-popup.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+  .text-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 3, 2, .82);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 950;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .3s ease;
+  }
+  .text-modal-overlay.open { opacity: 1; pointer-events: auto; }
+  .text-modal {
+    width: min(520px, 88vw);
+    background: linear-gradient(180deg, #2c2219, #191310);
+    border: 1px solid var(--gold);
+    border-radius: 10px;
+    box-shadow:
+      0 30px 80px rgba(0, 0, 0, .85),
+      0 0 60px rgba(176, 141, 63, .18),
+      inset 0 0 0 1px rgba(232, 200, 106, .1);
+    padding: 0 0 18px;
+    transform: scale(.94);
+    transition: transform .3s cubic-bezier(.2, .9, .3, 1.15);
+    overflow: hidden;
+  }
+  .text-modal-overlay.open .text-modal { transform: scale(1); }
+
+  .text-modal-name {
+    padding: 15px 24px 11px;
+    font-size: 13px;
+    letter-spacing: .24em;
+    text-indent: .24em;
+    color: var(--gold-light);
+    border-bottom: 1px solid rgba(176, 141, 63, .24);
+    display: none;
+    text-align: left;
+  }
+  .text-modal-name.show { display: block; }
+
+  .text-modal-body {
+    min-height: 110px;
+    max-height: 240px;
+    overflow-y: auto;
+    font-size: 15.5px;
+    line-height: 2.1;
+    letter-spacing: .1em;
+    color: var(--text);
+    text-align: left;
+    padding: 26px 24px 16px;
+    cursor: grab;
+    white-space: pre-wrap;
+  }
+  .text-modal-body::-webkit-scrollbar { width: 4px; }
+  .text-modal-body::-webkit-scrollbar-thumb { background: rgba(176,141,63,.4); border-radius: 2px; }
+  .text-modal-body.dragging-scroll { cursor: grabbing; }
+  .text-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 4px;
+    padding: 0 24px;
+  }
+
+  .card-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 3, 2, .82);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 960;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s ease;
+  }
+  .card-modal-overlay.open { opacity: 1; pointer-events: auto; }
+  .card-modal {
+    width: min(420px, 88vw);
+    background: linear-gradient(180deg, #2c2219, #191310);
+    border: 1px solid var(--gold);
+    border-radius: 10px;
+    box-shadow:
+      0 30px 80px rgba(0, 0, 0, .85),
+      0 0 60px rgba(176, 141, 63, .2),
+      inset 0 0 0 1px rgba(232, 200, 106, .12);
+    transform: scale(.94);
+    transition: transform .28s cubic-bezier(.2, .9, .3, 1.15);
+    overflow: hidden;
+  }
+  .card-modal-overlay.open .card-modal { transform: scale(1); }
+
+  .card-modal-name {
+    padding: 20px 24px 14px;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: .2em;
+    text-indent: .2em;
+    color: var(--gold-light);
+    text-shadow: 0 0 18px rgba(232, 200, 106, .5);
+    text-align: left;
+    border-bottom: 1px solid rgba(176, 141, 63, .24);
+  }
+  .card-modal-info {
+    padding: 22px 24px;
+    min-height: 80px;
+    max-height: 220px;
+    overflow-y: auto;
+    font-size: 14.5px;
+    line-height: 2.05;
+    letter-spacing: .08em;
+    color: var(--text);
+    cursor: grab;
+  }
+  .card-modal-info::-webkit-scrollbar { width: 4px; }
+  .card-modal-info::-webkit-scrollbar-thumb { background: rgba(176,141,63,.4); border-radius: 2px; }
+  .card-modal-info.dragging-scroll { cursor: grabbing; }
+
+  .card-modal-attrs {
+    padding: 16px 24px 4px;
+    display: flex;
+    gap: 28px;
+    border-top: 1px solid rgba(176, 141, 63, .2);
+  }
+  .card-modal-attrs:empty { display: none; }
+  .card-modal-attr {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .card-modal-attr-label {
+    font-size: 12px;
+    letter-spacing: .2em;
+    color: var(--text-dim);
+  }
+  .card-modal-attr-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--gold-light);
+    text-shadow: 0 0 12px rgba(232, 200, 106, .35);
+  }
+
+  .card-modal-tags {
+    padding: 14px 24px 18px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .card-tag {
+    font-size: 12px;
+    letter-spacing: .16em;
+    text-indent: .16em;
+    padding: 5px 12px;
+    border: 1px solid rgba(176, 141, 63, .5);
+    border-radius: 4px;
+    color: var(--gold-light);
+    background: rgba(176, 141, 63, .12);
+  }
+
+  .game-over-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .97);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1.2s ease;
+  }
+  .game-over-overlay.open { opacity: 1; pointer-events: auto; }
+  .game-over-modal {
+    text-align: center;
+    transform: scale(.94);
+    transition: transform .8s cubic-bezier(.2, .9, .3, 1.1);
+  }
+  .game-over-overlay.open .game-over-modal { transform: scale(1); }
+  .game-over-title {
+    font-size: 38px;
+    font-weight: 700;
+    letter-spacing: .6em;
+    text-indent: .6em;
+    color: var(--gold-light);
+    text-shadow: 0 0 50px rgba(232, 200, 106, .6), 0 0 100px rgba(232, 200, 106, .3);
+    margin-bottom: 56px;
+  }
+  .game-over-btn {
+    font-family: inherit;
+    font-size: 16px;
+    letter-spacing: .4em;
+    text-indent: .4em;
+    padding: 14px 44px;
+    color: var(--gold-light);
+    background: linear-gradient(180deg, rgba(176, 141, 63, .35), rgba(176, 141, 63, .1));
+    border: 1px solid var(--gold);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all .25s ease;
+  }
+  .game-over-btn:hover {
+    background: linear-gradient(180deg, rgba(232, 200, 106, .5), rgba(176, 141, 63, .2));
+    box-shadow: 0 0 40px rgba(232, 200, 106, .5);
+    color: #fff5d8;
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <header class="topbar">
+    <div class="title">一个故事</div>
+    <div class="topbar-right">
+      <div class="day">第 <span id="dayNum">1</span> 回合</div>
+    </div>
+  </header>
+
+  <main class="map" id="map">
+    <div class="map-dim" id="mapDim"></div>
+
+    <div class="modal" id="modal">
+      <div class="modal-header">
+        <span id="modalTitle">事件</span>
+        <button class="modal-close" id="modalClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="slot-column" id="slotColumn"></div>
+        <div class="slot-text" id="slotText"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" id="confirmBtn" disabled>确 认</button>
+      </div>
+    </div>
+  </main>
+
+  <section class="bottom-area">
+    <div class="chronicle">
+      <div class="chronicle-title">纪 事</div>
+      <div class="chronicle-body" id="chronicle"></div>
+    </div>
+
+    <footer class="hand-area">
+      <div class="hand-label">手 牌</div>
+      <div class="hand" id="hand"></div>
+    </footer>
+  </section>
+
+</div>
+
+<button class="btn btn-next-day" id="nextDayBtn">下 一 回 合</button>
+<div class="toast" id="toast"></div>
+
+<div class="intro-overlay" id="introOverlay">
+  <div class="intro-modal">
+    <button class="intro-close" id="introClose" title="关闭">✕</button>
+    <h2 class="intro-title">一个故事</h2>
+    <div class="intro-divider"></div>
+    <p class="intro-text">你姓乔，生在郓州。没人叫你的本名，所有人都叫你郓哥。
+你在这个地方卖果品为生。
+你手上已经没有钱财了，好在及时为果品找到了售卖人。
+带着你手中的雪梨寻找卖家吧。
+千万不要迟到，时间从来不等人。</p>
+  </div>
+</div>
+
+<div class="warn-popup" id="warnPopup">请按照指引操作。</div>
+
+<div class="text-modal-overlay" id="textModalOverlay">
+  <div class="text-modal">
+    <div class="text-modal-name" id="textModalName"></div>
+    <div class="text-modal-body" id="textModalBody"></div>
+    <div class="text-modal-footer">
+      <button class="btn" id="textModalConfirm">确 定</button>
+    </div>
+  </div>
+</div>
+
+<div class="card-modal-overlay" id="cardModalOverlay">
+  <div class="card-modal">
+    <div class="card-modal-name" id="cardModalName"></div>
+    <div class="card-modal-info" id="cardModalInfo"></div>
+    <div class="card-modal-attrs" id="cardModalAttrs"></div>
+    <div class="card-modal-tags" id="cardModalTags"></div>
+  </div>
+</div>
+
+<div class="game-over-overlay" id="gameOverOverlay">
+  <div class="game-over-modal">
+    <h1 class="game-over-title">结局：饿死</h1>
+    <button class="game-over-btn" id="restartBtn">再 来 一 次</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  const CARD_DEFS = {
+    yun:    {
+      name: '郓哥',
+      tags: ['人物', '你'],
+      info: '本姓乔，生在郓州，被取名叫郓哥，靠卖果品为生。',
+      quality: 'gold',
+      attrs: { int: 3, str: 2, cha: 2 }
+    },
+    dalan:  {
+      name: '大郎',
+      tags: ['人物'],
+      info: '炊饼摊主，个子矮小，炊饼实惠。称为大郎是因为有二郎。',
+      quality: 'stone',
+      attrs: { int: 1, str: 1, cha: 1 }
+    },
+    wangpo: {
+      name: '王婆',
+      tags: ['人物'],
+      info: '茶肆店家，同时做点说媒的生意。',
+      quality: 'stone',
+      attrs: { int: 4, str: 1, cha: 3 }
+    },
+    xianguan: {
+      name: '县官',
+      tags: ['人物', '官员'],
+      info: '青天大老爷，一县父母官。',
+      quality: 'stone',
+      attrs: { int: 5, str: 3, cha: 5 }
+    },
+    erlang: {
+      name: '二郎',
+      tags: ['人物'],
+      info: '传说中的打虎英雄。称为二郎是因为有大郎。嘶，这两人真是兄弟吗？',
+      quality: 'stone',
+      attrs: { int: 4, str: 9, cha: 6 }
+    },
+    pear:   { name: '雪梨', tags: ['果品', '食物'],  info: '上好的雪梨，买些吧。',       quality: 'stone' },
+    cui:    { name: '炊饼', tags: ['食物'],         info: '上好的炊饼，买些吧。',       quality: 'stone' },
+    coin:   { name: '铜钱', tags: ['铜钱'],         info: '被砍被剁，刀口无卷。',       quality: 'stone' },
+    miwen:  { name: '秘闻', tags: ['消息'],         info: '似乎是某则传言的后续。你需要前文。', quality: 'silver' },
+    chuanyan:{ name: '传言',tags: ['消息'],         info: '一则有关隔壁山冈的传言。据说可信度不低。', quality: 'silver' },
+    guaitan:{ name: '怪谈', tags: ['消息'],         info: '虽然令人惊诧，但是属于事实；即使属于事实，依然令人惊诧。', quality: 'silver' },
+    teshu:  { name: '特殊的传言', tags: ['消息'],   info: '卖炊饼的大郎有个老婆姓潘。西门官人在茶肆王婆那寻了个相好，姓潘。西门官人整天和姓潘的坐在茶肆，鱼水之欢。你现在去茶肆，把这传言告诉王婆，那西门官人不就找到了吗。', quality: 'silver' },
+    ximenguanren: {
+      name: '西门官人',
+      tags: ['人物'],
+      info: '西门府主人，富贵闲人，与潘氏有私情。',
+      quality: 'stone',
+      attrs: { int: 3, str: 2, cha: 4 }
+    },
+    panshi: {
+      name: '潘氏',
+      tags: ['人物'],
+      info: '大郎的妻子，与西门官人有私情。',
+      quality: 'stone',
+      attrs: { int: 2, str: 1, cha: 8 }
+    }
+  };
+
+  let teahouseFreeCount = 0;
+  let chafengProgress = 0;
+  let teahouseDoneCount = 0;
+  let teahouseCharmBonusGiven = false;
+  let teahouseRewardCount = 0;
+  const teahouseRewarded = { chuanyan: false, miwen: false, guaitan: false };
+  let pendingKuanghuan = false;
+
+  let kuanghuanAppeared = false;
+  let kuanghuanSpawnDay = 0;
+  let ximenfuSpawned = false;
+  let teahouseGone = false;
+
+  let pendingTeahouseOutcome = null;
+  let pendingZhuojian = false;
+
+  let dalanHidden = false;
+  let dalanGoneForever = false;
+  let pendingZhengquDay = null;
+
+  let scheduledPopups = [];
+
+  const ATTR_NAMES = { int: '智力', str: '武力', cha: '魅力' };
+
+  function modifyAttr(defId, attrKey, delta) {
+    const def = CARD_DEFS[defId];
+    if (!def || !def.attrs || !(attrKey in def.attrs)) return;
+    def.attrs[attrKey] += delta;
+
+    const attrName = ATTR_NAMES[attrKey];
+    const sign = delta >= 0 ? '+' : '';
+    const variant = delta > 0 ? 'accent' : (delta < 0 ? 'warn' : null);
+    addLog(def.name + '的' + attrName + sign + delta + '。', dayLabel(state.day), variant);
+
+    if (cardModalOverlay.classList.contains('open') && cardModalName.textContent === def.name) {
+      renderCardModalAttrs(def);
+    }
+  }
+
+  function renderCardModalAttrs(def) {
+    cardModalAttrs.innerHTML = '';
+    if (def.tags.indexOf('人物') !== -1 && def.attrs) {
+      const items = [
+        { label: '智力', value: def.attrs.int },
+        { label: '武力', value: def.attrs.str },
+        { label: '魅力', value: def.attrs.cha }
+      ];
+      items.forEach(a => {
+        const item = el('div', 'card-modal-attr');
+        item.appendChild(el('span', 'card-modal-attr-label', a.label));
+        item.appendChild(el('span', 'card-modal-attr-value', String(a.value)));
+        cardModalAttrs.appendChild(item);
+      });
+    }
+  }
+
+  function pickTeahouseReward() {
+    teahouseRewardCount += 1;
+    const count = teahouseRewardCount;
+
+    if (count === 2 && !teahouseRewarded.chuanyan) {
+      teahouseRewarded.chuanyan = true;
+      return 'chuanyan';
+    }
+    if (count === 4 && !teahouseRewarded.miwen) {
+      teahouseRewarded.miwen = true;
+      return 'miwen';
+    }
+    if (count === 5 && !teahouseRewarded.guaitan) {
+      teahouseRewarded.guaitan = true;
+      return 'guaitan';
+    }
+
+    const roll = Math.random();
+    let reward;
+    if (chafengProgress === 0) {
+      if (roll < 0.7) reward = 'chuanyan';
+      else if (roll < 0.9) reward = 'miwen';
+      else reward = 'guaitan';
+    } else if (chafengProgress === 1) {
+      if (roll < 0.3) reward = 'chuanyan';
+      else if (roll < 0.9) reward = 'miwen';
+      else reward = 'guaitan';
+    } else {
+      if (roll < 0.3) reward = 'chuanyan';
+      else if (roll < 0.4) reward = 'miwen';
+      else reward = 'guaitan';
+    }
+    teahouseRewarded[reward] = true;
+    return reward;
+  }
+
+  function isTeahousePresent() {
+    return state.events.some(e => e.def.id === 'teahouse');
+  }
+
+  function handCoinCount() {
+    let total = 0;
+    state.hand.forEach(s => {
+      if (CARD_DEFS[s.defId].name === '铜钱') total += s.count;
+    });
+    return total;
+  }
+
+  function isEventOnMap(eventId) {
+    return state.events.some(e => e.def.id === eventId);
+  }
+
+  function schedulePopup(roundsLeft, showFn) {
+    scheduledPopups.push({ roundsLeft: roundsLeft, showFn: showFn });
+  }
+
+  function processScheduledPopups() {
+    const ready = [];
+    for (let i = scheduledPopups.length - 1; i >= 0; i--) {
+      scheduledPopups[i].roundsLeft -= 1;
+      if (scheduledPopups[i].roundsLeft <= 0) {
+        ready.unshift(scheduledPopups.splice(i, 1)[0]);
+      }
+    }
+    ready.forEach(function (p) { p.showFn(); });
+  }
+
+  const EVENT_DEFS = {
+    hotel: {
+      id: 'hotel',
+      name: '酒店',
+      timing: 'timed',
+      repetition: 'once',
+      duration: 1,
+      position: { left: '50%', top: '48%' },
+      desc: '这是你工作的地方。拿果品来，带铜钱走。\n你的魅力越高，果品能卖的价钱越多。',
+      slots: [
+        { type: 'person', label: '人物', required: true },
+        { type: 'fruit',  label: '果品', required: true }
+      ],
+      resultTexts: ['卖出果品，赚得生计。\n你常常想，假如你的魅力更强一些，是不是能赚到更多钱呢？'],
+      despawnTexts: ['你很早就知道了时间不等人。\n不论你是有别的事情还是手中没有果品，这位卖家都不在意了。\n你赚钱的机会还有很多。会有下一位卖家的。但愿。'],
+      settle: function (event) {
+        const result = { gains: [], losses: [], returns: [] };
+
+        let cha = 0;
+        const personSlot = event.slots.find(s => s.type === 'person' && !s.fixedCard);
+        if (personSlot && personSlot.cards.length) {
+          const personDef = CARD_DEFS[personSlot.cards[0]];
+          cha = (personDef && personDef.attrs) ? personDef.attrs.cha : 0;
+          personSlot.cards.forEach(c => result.returns.push(c));
+          personSlot.cards = [];
+        }
+
+        const fruitSlot = event.slots.find(s => s.type === 'fruit');
+        if (fruitSlot && fruitSlot.cards.length) {
+          fruitSlot.cards.forEach(c => result.losses.push(c));
+          fruitSlot.cards = [];
+          const coinCount = cha + 1;
+          for (let i = 0; i < coinCount; i++) {
+            result.gains.push('coin');
+          }
+        }
+
+        return result;
+      }
+    },
+    teahouse: {
+      id: 'teahouse',
+      name: '茶肆',
+      timing: 'resident',
+      repetition: 'repeat',
+      position: { left: '34%', top: '36%' },
+      desc: '这是一家茶肆，你可以将一吊铜钱交给店家，店家会给你上一碗茶。当然大多数人来这不只是为了喝茶的。',
+      slots: [
+        { type: 'person', label: '人物', required: false, fixedCard: 'wangpo' },
+        { type: 'person', label: '人物', required: true },
+        { type: 'coin',   label: '铜钱', required: false, allowedNames: ['铜钱', '特殊的传言'] }
+      ],
+      resultTexts: function (event) {
+        const coinSlot = event.slots.find(s => s.type === 'coin');
+        const slotCard = coinSlot && coinSlot.cards.length ? coinSlot.cards[0] : null;
+        const slotCardName = slotCard ? CARD_DEFS[slotCard].name : null;
+
+        if (slotCardName === '特殊的传言') {
+          const yun = CARD_DEFS.yun;
+          if (yun.attrs.cha >= 4) {
+            return ['你向王婆道明来意。\n或许是你确实魅力不低，王婆很和气地指出西门官人所在。\n着急与相好私会，西门官人向你扔下十吊铜钱，连雪梨都没要。'];
+          }
+          if (yun.attrs.int >= 4) {
+            return ['你向王婆道明来意。\n王婆对西门官人的一切予以否认，但是瞒不过你。\n你撩开一道帘子，露出两个赤身裸体的人。\n西门官人给你二十吊铜钱作为封口费，尽管你知道这件事无需封口。'];
+          }
+          return ['你向王婆道明来意。\n王婆对西门官人的一切予以否认，你无计可施，说出市井的传言。\n王婆坚决否认，而你坚决否认她的否认。\n趁你不备，一碗茶泼了上来。\n你狼狈地走出茶摊。'];
+        }
+
+        if (slotCardName === '铜钱') {
+          return ['你从茶客那打听到许多消息，同时喝了一碗茶。'];
+        }
+
+        const nextCount = teahouseFreeCount + 1;
+
+        if (nextCount >= 4) {
+          return ['店家没能料到你的脸皮厚度，于是他将茶水泼在你的脸上。\n你很狼狈地离开了。\n后来你看到茶肆前多了一块招牌，上面画着你的肖像。"此人与狗不得入内。"'];
+        }
+        if (nextCount === 3) {
+          return ['事不过三。店家和和气气地将茶碗端到你面前，并用同样和气的声音说："如果你下次再不给钱，我会将你赶出去。"\n你没能探听到任何事件。'];
+        }
+        return ['你需要将一吊铜钱交给店家，本应如此。只是店家心善。\n"嗟，来食。"店家说。\n你顺便打听了一点消息。'];
+      },
+      settle: function (event) {
+        const result = { gains: [], losses: [], returns: [], despawn: false };
+
+        const personSlot = event.slots.find(s => s.type === 'person' && !s.fixedCard);
+        if (personSlot && personSlot.cards.length) {
+          personSlot.cards.forEach(c => result.returns.push(c));
+          personSlot.cards = [];
+        }
+
+        const coinSlot = event.slots.find(s => s.type === 'coin');
+        const slotCard = coinSlot && coinSlot.cards.length ? coinSlot.cards[0] : null;
+        const slotCardName = slotCard ? CARD_DEFS[slotCard].name : null;
+
+        if (slotCardName === '特殊的传言') {
+          coinSlot.cards.forEach(c => result.losses.push(c));
+          coinSlot.cards = [];
+
+          const yun = CARD_DEFS.yun;
+          if (yun.attrs.cha >= 4) {
+            for (let i = 0; i < 10; i++) result.gains.push('coin');
+            result.scheduleDecision = true;
+          } else if (yun.attrs.int >= 4) {
+            for (let i = 0; i < 20; i++) result.gains.push('coin');
+            result.scheduleDecision = true;
+          } else {
+            result.nextEvent = 'fuchou';
+          }
+          return result;
+        }
+
+        if (slotCardName === '铜钱') {
+          coinSlot.cards.forEach(c => result.losses.push(c));
+          coinSlot.cards = [];
+          result.gains.push(pickTeahouseReward());
+          return result;
+        }
+
+        teahouseFreeCount += 1;
+
+        if (teahouseFreeCount >= 4) {
+          result.despawn = true;
+        } else if (teahouseFreeCount >= 3) {
+          /* 第三次：仅返还人物 */
+        } else {
+          result.gains.push(pickTeahouseReward());
+        }
+
+        return result;
+      }
+    },
+    cuibingtan: {
+      id: 'cuibingtan',
+      name: '炊饼摊',
+      timing: 'resident',
+      repetition: 'repeat',
+      instantSettle: true,
+      position: { left: '66%', top: '40%' },
+      desc: '摊主的炊饼很好吃。最重要的是便宜。',
+      slots: [
+        { type: 'person', label: '人物', required: true, fixedCard: 'dalan' },
+        { type: 'coin',   label: '铜钱', required: true }
+      ],
+      resultTexts: function (event) {
+        if (!isTeahousePresent()) {
+          return ['摊主看见你，收起炊饼。\n"连茶肆的钱都赖，我不与你这样的人做生意。"\n你得好好想想这世界上还有什么是可以饱腹的了。'];
+        }
+        return ['很平常的一次购物。除了少一吊铜钱与多两张炊饼，什么也没有发生。\n"欢迎下次再来。"摊主说。'];
+      },
+      settle: function (event) {
+        const result = { gains: [], losses: [], returns: [] };
+
+        const coinSlot = event.slots.find(s => s.type === 'coin');
+
+        if (!isTeahousePresent()) {
+          if (coinSlot && coinSlot.cards.length) {
+            coinSlot.cards.forEach(c => result.returns.push(c));
+            coinSlot.cards = [];
+          }
+          result.despawn = true;
+        } else {
+          if (coinSlot && coinSlot.cards.length) {
+            coinSlot.cards.forEach(c => result.losses.push(c));
+            coinSlot.cards = [];
+          }
+          result.gains.push('cui');
+          result.gains.push('cui');
+        }
+
+        return result;
+      }
+    },
+    fanshigang: {
+      id: 'fanshigang',
+      name: '饭是钢',
+      timing: 'resident',
+      repetition: 'repeat',
+      required: true,
+      position: { left: '66%', top: '56%' },
+      desc: '你知道一个很简单的道理：人不吃饭就会死。',
+      slots: [
+        { type: 'food', label: '食物', required: true }
+      ],
+      resultTexts: [],
+      despawnTexts: ['我以为你知道那个很简单的道理，现在你告诉我了，人不吃饭真的会死。'],
+      settle: function (event) {
+        const result = { gains: [], losses: [], returns: [] };
+        const foodSlot = event.slots.find(s => s.type === 'food');
+        if (foodSlot && foodSlot.cards.length) {
+          foodSlot.cards.forEach(c => result.losses.push(c));
+          foodSlot.cards = [];
+        }
+        return result;
+      }
+    },
+    chafengzhuoying1: {
+      id: 'chafengzhuoying1',
+      name: '捕风捉影',
+      timing: 'resident',
+      repetition: 'repeat',
+      position: { left: '34%', top: '64%' },
+      desc: '你听到那则传言了吗。',
+      slots: [
+        { type: 'message', label: '消息', required: true, allowedName: '传言' }
+      ],
+      resultTexts: ['"你听说了吗？隔壁山冈有老虎。"\n"当然听说了，据说还死了不少人，事情很大啊。"'],
+      settle: function (event) {
+        const result = { gains: [], losses: [], returns: [], transformTo: 'chafengzhuoying2' };
+        const msgSlot = event.slots.find(s => s.type === 'message');
+        if (msgSlot && msgSlot.cards.length) {
+          msgSlot.cards.forEach(c => result.losses.push(c));
+          msgSlot.cards = [];
+        }
+        return result;
+      }
+    },
+    chafengzhuoying2: {
+      id: 'chafengzhuoying2',
+      name: '捕风捉影',
+      timing: 'resident',
+      repetition: 'repeat',
+      position: { left: '34%', top: '64%' },
+      desc: '人心惶惶，人心惶惶，人心···啊，好像不惶惶了。',
+      slots: [
+        { type: 'message', label: '消息', required: true, allowedName: '秘闻' }
+      ],
+      resultTexts: ['"我告诉你件事，你可千万不要往外说。"\n"什么事，你倒是快说啊。"\n"老虎死了。"\n"啊。"'],
+      settle: function (event) {
+        const result = { gains: [], losses: [], returns: [], transformTo: 'chafengzhuoying3' };
+        const msgSlot = event.slots.find(s => s.type === 'message');
+        if (msgSlot && msgSlot.cards.length) {
+          msgSlot.cards.forEach(c => result.losses.push(c));
+          msgSlot.cards = [];
+        }
+        return result;
+      }
+    },
+    chafengzhuoying3: {
+      id: 'chafengzhuoying3',
+      name: '捕风捉影',
+      timing: 'resident',
+      repetition: 'repeat',
+      position: { left: '34%', top: '64%' },
+      desc: '一会说有，一会又说死了，这不诡异吗，这不怪谈吗？',
+      slots: [
+        { type: 'message', label: '消息', required: true, allowedName: '怪谈' }
+      ],
+      resultTexts: ['"喜报！喜报！"一个猎户在街上飞奔，"老虎死了！老虎死了！"\n"老虎死了？"有人问。\n那猎户继续奔跑，声音从远处传过来。\n"有一个壮士，醉酒把老虎打死了。"\n虽然，这简直是个怪谈。'],
+      settle: function (event) {
+        const result = { gains: [], losses: [], returns: [], despawn: true };
+        const msgSlot = event.slots.find(s => s.type === 'message');
+        if (msgSlot && msgSlot.cards.length) {
+          msgSlot.cards.forEach(c => result.losses.push(c));
+          msgSlot.cards = [];
+        }
+        return result;
+      }
+    },
+    kuanghuan: {
+      id: 'kuanghuan',
+      name: '狂欢',
+      timing: 'timed',
+      repetition: 'once',
+      duration: 1,
+      position: { left: '50%', top: '68%' },
+      desc: '万人空巷，全县的人都来看那位打虎的英雄，甚至包括那位县官。',
+      slots: [
+        { type: 'person', label: '人物', required: false, fixedCard: 'xianguan' },
+        { type: 'person', label: '人物', required: false, fixedCard: 'erlang' },
+        { type: 'person', label: '人物', required: true }
+      ],
+      resultTexts: ['你好不容易挤到人群最前面，正巧县官为英雄赏下铜钱。\n"打死老虎是我侥幸，怎么能受这些赏钱呢？不如分给众人吧。"那位英雄说。\n没过几天，你听说那位打虎英雄成了本县步兵都头。'],
+      despawnTexts: ['好热闹的事件，可惜与你无关。\n没过几天，你听说那位打虎英雄成了本县步兵都头。'],
+      settle: function (event) {
+        const result = { gains: [], losses: [], returns: [] };
+
+        const thirdSlot = event.slots[2];
+        if (thirdSlot && thirdSlot.cards.length) {
+          thirdSlot.cards.forEach(c => result.returns.push(c));
+          thirdSlot.cards = [];
+        }
+
+        for (let i = 0; i < 10; i++) {
+          result.gains.push('coin');
+        }
+
+        return result;
+      },
+      onDespawn: function () {
+        modifyAttr('erlang', 'cha', 1);
+        if (CARD_DEFS.erlang.tags.indexOf('官员') === -1) {
+          CARD_DEFS.erlang.tags.push('官员');
+        }
+      }
+    },
+    zhuangzao: {
+      id: 'zhuangzao',
+      name: '妆造',
+      timing: 'resident',
+      repetition: 'once',
+      position: { left: '16%', top: '82%' },
+      desc: '你最近好像有了点闲钱，来提升一下魅力吗？\n只要两吊铜钱。',
+      slots: [
+        { type: 'person', label: '人物', required: true, allowedName: '郓哥' },
+        { type: 'coin',   label: '铜钱', required: true, maxCount: 2 }
+      ],
+      resultTexts: ['有了魅力，一切都会好做很多。\n你的魅力提升了。'],
+      settle: function (event) {
+        const result = { gains: [], losses: [], returns: [] };
+        const personSlot = event.slots.find(s => s.type === 'person');
+        if (personSlot && personSlot.cards.length) {
+          personSlot.cards.forEach(c => result.returns.push(c));
+          personSlot.cards = [];
+        }
+        const coinSlot = event.slots.find(s => s.type === 'coin');
+        if (coinSlot && coinSlot.cards.length) {
+          coinSlot.cards.forEach(c => result.losses.push(c));
+          coinSlot.cards = [];
+        }
+        modifyAttr('yun', 'cha', 1);
+        return result;
+      }
+    },
+    xueyuan: {
+      id: 'xueyuan',
+      name: '学院',
+      timing: 'resident',
+      repetition: 'once',
+      position: { left: '32%', top: '82%' },
+      desc: '你最近好像有了点闲钱，来花钱读书吗？\n只要两吊铜钱。',
+      slots: [
+        { type: 'person', label: '人物', required: true, allowedName: '郓哥' },
+        { type: 'coin',   label: '铜钱', required: true, maxCount: 2 }
+      ],
+      resultTexts: ['你不清楚从学院学到了什么，总之学到了什么吧。\n你的智力提升了。'],
+      settle: function (event) {
+        const result = { gains: [], losses: [], returns: [] };
+        const personSlot = event.slots.find(s => s.type === 'person');
+        if (personSlot && personSlot.cards.length) {
+          personSlot.cards.forEach(c => result.returns.push(c));
+          personSlot.cards = [];
+        }
+        const coinSlot = event.slots.find(s => s.type === 'coin');
+        if (coinSlot && coinSlot.cards.length) {
+          coinSlot.cards.forEach(c => result.losses.push(c));
+          coinSlot.cards = [];
+        }
+        modifyAttr('yun', 'int', 1);
+        return result;
+      }
+    },
+    xiwu: {
+      id: 'xiwu',
+      name: '习武',
+      timing: 'resident',
+      repetition: 'once',
+      position: { left: '48%', top: '82%' },
+      desc: '你最近好像有了点闲钱，锻炼一下身体？\n只要两吊铜钱。',
+      slots: [
+        { type: 'person', label: '人物', required: true, allowedName: '郓哥' },
+        { type: 'coin',   label: '铜钱', required: true, maxCount: 2 }
+      ],
+      resultTexts: ['又出钱又出力。至少对身体有好处，你这么安慰自己。\n你的武力提升了。'],
+      settle: function (event) {
+        const result = { gains: [], losses: [], returns: [] };
+        const personSlot = event.slots.find(s => s.type === 'person');
+        if (personSlot && personSlot.cards.length) {
+          personSlot.cards.forEach(c => result.returns.push(c));
+          personSlot.cards = [];
+        }
+        const coinSlot = event.slots.find(s => s.type === 'coin');
+        if (coinSlot && coinSlot.cards.length) {
+          coinSlot.cards.forEach(c => result.losses.push(c));
+          coinSlot.cards = [];
+        }
+        modifyAttr('yun', 'str', 1);
+        return result;
+      }
+    },
+    ximenfu: {
+      id: 'ximenfu',
+      name: '西门府',
+      timing: 'timed',
+      repetition: 'once',
+      duration: 1,
+      position: { left: '82%', top: '72%' },
+      desc: '西门官人是你的老客户，他向你要梨子了。\n此人富贵，你可以得到双倍的铜钱。',
+      slots: [
+        { type: 'person', label: '人物', required: true, allowedName: '郓哥' },
+        { type: 'fruit',  label: '果品', required: true, allowedName: '雪梨' }
+      ],
+      resultTexts: ['官人不在。\n为了铜钱，你四处找人问询。\n有人告诉你一段传言。'],
+      despawnTexts: ['你又错过了一个售卖果品的机会。这同时也是你与接下来这件事情有关的机会。'],
+      onDespawnEnding: '局外人',
+      settle: function (event) {
+        const result = { gains: [], losses: [], returns: [] };
+
+        const personSlot = event.slots.find(s => s.type === 'person');
+        if (personSlot && personSlot.cards.length) {
+          personSlot.cards.forEach(c => result.returns.push(c));
+          personSlot.cards = [];
+        }
+        const fruitSlot = event.slots.find(s => s.type === 'fruit');
+        if (fruitSlot && fruitSlot.cards.length) {
+          fruitSlot.cards.forEach(c => result.returns.push(c));
+          fruitSlot.cards = [];
+        }
+
+        if (teahouseGone) {
+          result.triggerEnding = '局外人';
+        } else {
+          result.gains.push('teshu');
+        }
+        return result;
+      }
+    },
+    fuchou: {
+      id: 'fuchou',
+      name: '复仇',
+      timing: 'resident',
+      repetition: 'once',
+      position: { left: '50%', top: '36%' },
+      desc: '此仇不报非君子，而你本来也不是君子，报仇更是理所应当的事。\n现在就找到卖炊饼的大郎，把一切都说与他听吧。',
+      slots: [
+        { type: 'person', label: '人物', required: false, fixedCard: 'dalan' },
+        { type: 'person', label: '人物', required: true, allowedName: '郓哥' }
+      ],
+      resultTexts: ['你对大郎说："你是鸭。"\n大郎说："我老婆又不偷汉子，我如何是鸭？"\n你说："你老婆不偷汉子，只偷子汉。"\n大郎不聪明，但他多少看出你没开玩笑，于是听你说完有关西门官人与他老婆的风流事。\n大郎沉默着，掏出十张炊饼。"你告诉我这件事，我送你十张炊饼。"'],
+      settle: function (event) {
+        const result = { gains: [], losses: [], returns: [] };
+
+        const personSlot = event.slots.find(s => s.type === 'person' && !s.fixedCard);
+        if (personSlot && personSlot.cards.length) {
+          personSlot.cards.forEach(c => result.returns.push(c));
+          personSlot.cards = [];
+        }
+
+        for (let i = 0; i < 10; i++) {
+          result.gains.push('cui');
+        }
+        result.nextEvent = 'zhuojian';
+        return result;
+      }
+    },
+    zhuojian: {
+      id: 'zhuojian',
+      name: '捉奸',
+      timing: 'timed',
+      repetition: 'once',
+      duration: 1,
+      position: { left: '34%', top: '22%' },
+      desc: '你把一切都告诉了大郎。现在是大郎捉奸的时候了。',
+      slots: [
+        { type: 'person', label: '人物', required: true, fixedCard: 'ximenguanren' },
+        { type: 'person', label: '人物', required: true, fixedCard: 'panshi' },
+        { type: 'person', label: '人物', required: true, fixedCard: 'dalan' },
+        { type: 'person', label: '人物', required: true, allowedName: '郓哥' }
+      ],
+      resultTexts: function () {
+        const yun = CARD_DEFS.yun;
+        if (yun.attrs.str >= 4) {
+          return ['你打听好西门官人私会的日子，他在床上享尽鱼水之欢的时候，你与大郎闯上王婆的茶肆。\n你与王婆推推搡搡，大郎踹开后院的门。\n你用余光看到两个赤身裸体的人。\n捉奸在床，西门官人还要反抗，幸亏你武力不低，几下制服，扭送官府。'];
+        }
+        return ['你打听好西门官人私会的日子，他在床上享尽鱼水之欢的时候，你与大郎闯上王婆的茶肆。\n你用余光看到两个赤身裸体的人，其中一个的左脚揣在大郎的腹部。\n你怨恨自己平时不学武艺，捉奸不成，被打一顿。\n大郎至此一病不起。'];
+      },
+      despawnTexts: ['时机已过。大郎没能等到你。\n有些事，错过了就是错过了。'],
+      settle: function (event) {
+        const result = { gains: [], losses: [], returns: [] };
+
+        const yunSlot = event.slots.find(s => !s.fixedCard);
+        if (yunSlot && yunSlot.cards.length) {
+          yunSlot.cards.forEach(c => result.returns.push(c));
+          yunSlot.cards = [];
+        }
+
+        const yun = CARD_DEFS.yun;
+        if (yun.attrs.str >= 4) {
+          result.triggerEnding = '恶有恶报';
+        } else {
+          dalanGoneForever = true;
+          dalanHidden = true;
+          pendingZhengquDay = state.day + 3;
+          schedulePopup(2, function () {
+            startTextSequence(['你听说大郎病死了。\n他绝对不是病死的，你想。'], '', function () {});
+          });
+          schedulePopup(3, function () {
+            startTextSequence(['此前打虎英雄二郎一直在外地做事，现在他回来了。他将得到亲兄弟的死讯。'], '', function () {});
+          });
+        }
+        return result;
+      }
+    },
+    zhengqu: {
+      id: 'zhengqu',
+      name: '取证',
+      timing: 'timed',
+      repetition: 'once',
+      duration: 1,
+      position: { left: '50%', top: '20%' },
+      desc: '二郎来问你那件捉奸的事情了。请好好回答。',
+      slots: [
+        { type: 'person', label: '人物', required: true, fixedCard: 'erlang' },
+        { type: 'person', label: '人物', required: true, allowedName: '郓哥' }
+      ],
+      resultTexts: ['你将一切都告诉了他，当然也告诉他你不信大郎的死因。\n他给了你很多银子。\n接下来这事与你无关了，你只听说西门官人、潘氏、王婆全部被当作了祭品。'],
+      despawnTexts: ['二郎问你问题，你却没有及时答复。\n他现在有点红了眼，所以你死的莫名其妙。\n难道你还想在武力上胜过他？'],
+      onDespawnEnding: '总之是死了',
+      settle: function (event) {
+        const result = { gains: [], losses: [], returns: [] };
+
+        const yunSlot = event.slots.find(s => !s.fixedCard);
+        if (yunSlot && yunSlot.cards.length) {
+          yunSlot.cards.forEach(c => result.returns.push(c));
+          yunSlot.cards = [];
+        }
+
+        result.triggerEnding = '水浒';
+        return result;
+      }
+    }
+  };
+
+  const state = {
+    day: 1,
+    hand: [
+      { defId: 'yun',  count: 1 },
+      { defId: 'pear', count: 5 }
+    ],
+    events: [],
+    nextEventUid: 1
+  };
+
+  const guide = {
+    step: 'intro',
+    tipEl: null,
+    tipTarget: null,
+    tipPlacement: 'right',
+    warnTimer: null
+  };
+
+  const textSeq = { texts: [], index: 0, onComplete: null, eventName: '' };
+  const dragState = { source: null, handIdx: -1, eventUid: null, slotIdx: -1, defId: null, handled: false };
+
+  let chronicleLastDate = null;
+  let activeEventUid = null;
+
+  const $ = id => document.getElementById(id);
+  const dayNum       = $('dayNum');
+  const mapEl        = $('map');
+  const mapDim       = $('mapDim');
+  const modal        = $('modal');
+  const modalTitle   = $('modalTitle');
+  const modalClose   = $('modalClose');
+  const slotColumn   = $('slotColumn');
+  const slotText     = $('slotText');
+  const confirmBtn   = $('confirmBtn');
+  const hand         = $('hand');
+  const chronicle    = $('chronicle');
+  const nextDayBtn   = $('nextDayBtn');
+  const toast        = $('toast');
+  const introOverlay = $('introOverlay');
+  const introClose   = $('introClose');
+  const warnPopup    = $('warnPopup');
+  const textModalOverlay = $('textModalOverlay');
+  const textModalName    = $('textModalName');
+  const textModalBody    = $('textModalBody');
+  const textModalConfirm = $('textModalConfirm');
+  const cardModalOverlay = $('cardModalOverlay');
+  const cardModalName    = $('cardModalName');
+  const cardModalInfo    = $('cardModalInfo');
+  const cardModalAttrs   = $('cardModalAttrs');
+  const cardModalTags    = $('cardModalTags');
+  const gameOverOverlay  = $('gameOverOverlay');
+  const gameOverTitle    = gameOverOverlay.querySelector('.game-over-title');
+  const restartBtn       = $('restartBtn');
+  const textModalFooter  = textModalOverlay.querySelector('.text-modal-footer');
+
+  let toastTimer = null;
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+
+  function dayLabel(n) {
+    const cn = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+    if (n <= 0)  return '第零回合';
+    if (n < 10)  return '第' + cn[n] + '回合';
+    if (n === 10) return '第十回合';
+    if (n < 20)  return '第十' + cn[n % 10] + '回合';
+    if (n < 100) {
+      const t = Math.floor(n / 10);
+      const o = n % 10;
+      return '第' + cn[t] + '十' + (o ? cn[o] : '') + '回合';
+    }
+    return '第' + n + '回合';
+  }
+
+  function addLog(text, dateLabel, variant) {
+    if (dateLabel && dateLabel !== chronicleLastDate) {
+      const d = document.createElement('div');
+      d.className = 'log-date';
+      d.textContent = dateLabel;
+      chronicle.appendChild(d);
+      chronicleLastDate = dateLabel;
+    }
+    const p = document.createElement('p');
+    p.className = 'log-item' + (variant ? ' ' + variant : '');
+    p.textContent = text;
+    chronicle.appendChild(p);
+    chronicle.scrollTop = chronicle.scrollHeight;
+  }
+
+  function el(tag, className, text) {
+    const e = document.createElement(tag);
+    if (className) e.className = className;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+
+  /* 手牌添加：人物卡永远唯一，堆叠数强制为 1 */
+  function addToHand(defId, count) {
+    count = count || 1;
+    const def = CARD_DEFS[defId];
+    const isPerson = def && def.tags.indexOf('人物') !== -1;
+
+    const existing = state.hand.find(s => s.defId === defId);
+    if (existing) {
+      if (isPerson) {
+        existing.count = 1;
+      } else {
+        existing.count += count;
+      }
+    } else {
+      state.hand.push({ defId, count: isPerson ? 1 : count });
+    }
+  }
+
+  function removeFromHand(defId, count) {
+    count = count || 1;
+    const idx = state.hand.findIndex(s => s.defId === defId);
+    if (idx === -1) return false;
+    state.hand[idx].count -= count;
+    if (state.hand[idx].count <= 0) state.hand.splice(idx, 1);
+    return true;
+  }
+
+  function enableDragScroll(elm) {
+    let isDown = false, startY = 0, startTop = 0;
+    elm.addEventListener('mousedown', function (e) {
+      if (e.target.closest('[draggable="true"]')) return;
+      if (e.target.closest('button')) return;
+      if (elm.scrollHeight <= elm.clientHeight) return;
+      isDown = true;
+      startY = e.pageY;
+      startTop = elm.scrollTop;
+      elm.classList.add('dragging-scroll');
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', function (e) {
+      if (!isDown) return;
+      elm.scrollTop = startTop - (e.pageY - startY);
+    });
+    document.addEventListener('mouseup', function () {
+      if (!isDown) return;
+      isDown = false;
+      elm.classList.remove('dragging-scroll');
+    });
+  }
+
+  function enableHandScroll() {
+    hand.addEventListener('wheel', function (e) {
+      if (hand.scrollWidth <= hand.clientWidth) return;
+      e.preventDefault();
+      const delta = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+      hand.scrollLeft += delta;
+    }, { passive: false });
+
+    let isDown = false, startX = 0, startLeft = 0;
+    hand.addEventListener('mousedown', function (e) {
+      if (e.button !== 0) return;
+      if (e.target.closest('.card')) return;
+      if (e.target.closest('.stack-count')) return;
+      if (hand.scrollWidth <= hand.clientWidth) return;
+      isDown = true;
+      startX = e.pageX;
+      startLeft = hand.scrollLeft;
+      hand.classList.add('dragging-scroll');
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', function (e) {
+      if (!isDown) return;
+      hand.scrollLeft = startLeft - (e.pageX - startX);
+    });
+    document.addEventListener('mouseup', function () {
+      if (!isDown) return;
+      isDown = false;
+      hand.classList.remove('dragging-scroll');
+    });
+  }
+
+  enableDragScroll(chronicle);
+  enableDragScroll(slotText);
+  enableDragScroll(textModalBody);
+  enableDragScroll(cardModalInfo);
+  enableHandScroll();
+
+  function positionTip(tipEl, targetEl, placement) {
+    const rect = targetEl.getBoundingClientRect();
+    const tipRect = tipEl.getBoundingClientRect();
+    let left, top;
+    switch (placement) {
+      case 'right':      left = rect.right + 14; top = rect.top + rect.height / 2 - tipRect.height / 2; break;
+      case 'left':       left = rect.left - tipRect.width - 14; top = rect.top + rect.height / 2 - tipRect.height / 2; break;
+      case 'top':        left = rect.left + rect.width / 2 - tipRect.width / 2; top = rect.top - tipRect.height - 14; break;
+      case 'bottom':     left = rect.left + rect.width / 2 - tipRect.width / 2; top = rect.bottom + 14; break;
+      default:           left = rect.right + 14; top = rect.top;
+    }
+    left = Math.max(8, Math.min(left, window.innerWidth - tipRect.width - 8));
+    top  = Math.max(8, Math.min(top, window.innerHeight - tipRect.height - 8));
+    tipEl.style.left = left + 'px';
+    tipEl.style.top  = top + 'px';
+  }
+
+  function showTip(targetEl, text, placement) {
+    hideTip();
+    const tip = el('div', 'guide-tip', text);
+    document.body.appendChild(tip);
+    positionTip(tip, targetEl, placement);
+    void tip.offsetWidth;
+    tip.classList.add('show');
+    guide.tipEl = tip;
+    guide.tipTarget = targetEl;
+    guide.tipPlacement = placement;
+  }
+
+  function hideTip() {
+    if (guide.tipEl) { guide.tipEl.remove(); guide.tipEl = null; guide.tipTarget = null; }
+  }
+
+  function showWarn() {
+    warnPopup.classList.remove('show');
+    void warnPopup.offsetWidth;
+    warnPopup.classList.add('show');
+    clearTimeout(guide.warnTimer);
+    guide.warnTimer = setTimeout(() => warnPopup.classList.remove('show'), 500);
+  }
+
+  function setStep(step) {
+    guide.step = step;
+    hideTip();
+    if (step === 'step1') {
+      const node = document.querySelector('.event-node');
+      if (node) showTip(node, '这里有一个事件，右上角的数字代表它一回合后会消失，现在点击它。', 'right');
+    } else if (step === 'step2') {
+      const slot = document.querySelector('.slot');
+      if (slot) showTip(slot, '将你与雪梨拖入此区域。', 'bottom');
+    } else if (step === 'step3') {
+      showTip(confirmBtn, '点击确定。', 'top');
+    } else if (step === 'step4') {
+      showTip(modalClose, '点击关闭事件。', 'bottom');
+    } else if (step === 'step5') {
+      showTip(nextDayBtn, '点击进入下一回合。', 'left');
+    }
+  }
+
+  document.addEventListener('click', function (e) {
+    const step = guide.step;
+    if (step === 'free' || step === 'intro') return;
+    if (textModalOverlay.classList.contains('open')) return;
+    if (cardModalOverlay.classList.contains('open')) return;
+
+    const target = e.target;
+
+    if (step === 'step1') {
+      if (!target.closest('.event-node')) { e.stopPropagation(); e.preventDefault(); showWarn(); }
+    } else if (step === 'step2') {
+      e.stopPropagation(); e.preventDefault(); showWarn();
+    } else if (step === 'step3') {
+      if (!target.closest('#confirmBtn')) { e.stopPropagation(); e.preventDefault(); showWarn(); }
+    } else if (step === 'step4') {
+      if (!target.closest('#modalClose')) { e.stopPropagation(); e.preventDefault(); showWarn(); }
+    } else if (step === 'step5') {
+      if (!target.closest('#nextDayBtn')) { e.stopPropagation(); e.preventDefault(); showWarn(); }
+    }
+  }, true);
+
+  document.addEventListener('dragstart', function (e) {
+    if (guide.step === 'step1') e.preventDefault();
+  }, true);
+
+  document.addEventListener('drop', function (e) {
+    if (guide.step === 'step2') {
+      if (!e.target.closest('.slot')) { e.preventDefault(); e.stopPropagation(); showWarn(); }
+    }
+  }, true);
+
+  window.addEventListener('resize', function () {
+    if (guide.tipEl && guide.tipTarget) positionTip(guide.tipEl, guide.tipTarget, guide.tipPlacement);
+  });
+
+  function createCardEl(defId) {
+    const def = CARD_DEFS[defId];
+    const cardEl = el('div', 'card' + (def.quality === 'gold' ? ' card-gold' : ''));
+    cardEl.dataset.defId = defId;
+
+    const inner = el('div', 'card-inner');
+    inner.appendChild(el('div', 'card-name', def.name));
+    cardEl.appendChild(inner);
+    return cardEl;
+  }
+
+  function clearHandDropIndicators() {
+    hand.querySelectorAll('.card').forEach(function (c) {
+      c.classList.remove('drop-target', 'merge-target');
+    });
+  }
+
+  function renderHand() {
+    hand.innerHTML = '';
+    state.hand.forEach(function (stack, idx) {
+      const cardEl = createCardEl(stack.defId);
+      cardEl.dataset.handIdx = idx;
+      cardEl.setAttribute('draggable', 'true');
+
+      if (stack.count > 1) {
+        const badge = el('div', 'stack-count', String(stack.count));
+        badge.title = '点击分离一张';
+        badge.addEventListener('click', function (e) {
+          e.stopPropagation();
+          splitHandStack(idx);
+        });
+        cardEl.appendChild(badge);
+      }
+
+      cardEl.addEventListener('dragstart', function (e) {
+        dragState.source = 'hand';
+        dragState.handIdx = idx;
+        dragState.defId = stack.defId;
+        dragState.handled = false;
+        e.dataTransfer.setData('text/plain', stack.defId);
+        e.dataTransfer.effectAllowed = 'move';
+        cardEl.classList.add('dragging');
+      });
+
+      cardEl.addEventListener('dragend', function () {
+        cardEl.classList.remove('dragging');
+        clearHandDropIndicators();
+        dragState.source = null;
+        dragState.handIdx = -1;
+        dragState.defId = null;
+        dragState.handled = false;
+      });
+
+      cardEl.addEventListener('click', function (e) {
+        if (e.target.closest('.stack-count')) return;
+        openCardModal(stack.defId);
+      });
+
+      cardEl.addEventListener('dragover', function (e) {
+        if (dragState.source !== 'hand') return;
+        if (dragState.handIdx === idx) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+
+        clearHandDropIndicators();
+
+        const rect = cardEl.getBoundingClientRect();
+        const relX = (e.clientX - rect.left) / rect.width;
+
+        const draggedStack = state.hand[dragState.handIdx];
+        const targetStack = state.hand[idx];
+
+        if (!draggedStack || !targetStack) return;
+
+        if (draggedStack.defId === targetStack.defId && relX > 0.25 && relX < 0.75) {
+          cardEl.classList.add('merge-target');
+        } else {
+          cardEl.classList.add('drop-target');
+        }
+      });
+
+      cardEl.addEventListener('dragleave', function (e) {
+        if (!cardEl.contains(e.relatedTarget)) {
+          cardEl.classList.remove('drop-target', 'merge-target');
+        }
+      });
+
+      cardEl.addEventListener('drop', function (e) {
+        if (dragState.source !== 'hand') return;
+        if (dragState.handIdx === idx) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        const rect = cardEl.getBoundingClientRect();
+        const relX = (e.clientX - rect.left) / rect.width;
+
+        const fromIdx = dragState.handIdx;
+        const toIdx = idx;
+        const draggedStack = state.hand[fromIdx];
+        const targetStack = state.hand[toIdx];
+
+        if (!draggedStack || !targetStack) return;
+
+        if (draggedStack.defId === targetStack.defId && relX > 0.25 && relX < 0.75) {
+          targetStack.count += draggedStack.count;
+          state.hand.splice(fromIdx, 1);
+        } else {
+          const [moved] = state.hand.splice(fromIdx, 1);
+          let insertIdx = toIdx;
+          if (fromIdx < toIdx) insertIdx--;
+          if (relX >= 0.5) insertIdx++;
+          state.hand.splice(insertIdx, 0, moved);
+        }
+
+        dragState.source = null;
+        dragState.handIdx = -1;
+        dragState.defId = null;
+        dragState.handled = true;
+
+        renderHand();
+      });
+
+      hand.appendChild(cardEl);
+    });
+  }
+
+  function splitHandStack(idx) {
+    const stack = state.hand[idx];
+    if (!stack || stack.count <= 1) return;
+    const def = CARD_DEFS[stack.defId];
+    if (def && def.tags.indexOf('人物') !== -1) return; /* 人物卡不可分离 */
+    stack.count -= 1;
+    state.hand.push({ defId: stack.defId, count: 1 });
+    renderHand();
+    showToast('已分离一张' + CARD_DEFS[stack.defId].name + '。');
+  }
+
+  function renderEvents() {
+    document.querySelectorAll('.event-node').forEach(n => n.remove());
+    state.events.forEach(function (ev) {
+      const node = el('div', 'event-node');
+      node.dataset.uid = ev.uid;
+      node.style.left = ev.def.position.left;
+      node.style.top  = ev.def.position.top;
+
+      node.appendChild(el('div', 'node-name', ev.def.name));
+
+      if (ev.def.timing === 'timed') {
+        const cd = el('div', 'countdown', String(ev.countdown));
+        node.appendChild(cd);
+      }
+
+      if (ev.confirmed) node.classList.add('done');
+
+      node.addEventListener('click', function () { openEventModal(ev.uid); });
+      mapEl.insertBefore(node, mapDim);
+    });
+  }
+
+  function getEventByUid(uid) {
+    return state.events.find(e => e.uid === uid);
+  }
+
+  function openEventModal(uid) {
+    const ev = getEventByUid(uid);
+    if (!ev) return;
+    activeEventUid = uid;
+
+    modalTitle.textContent = ev.def.name;
+    slotText.textContent = ev.def.desc;
+
+    renderEventSlots(ev);
+    updateConfirmButton(ev);
+
+    modal.classList.add('open');
+    mapDim.classList.add('open');
+
+    nextDayBtn.disabled = true;
+
+    if (guide.step === 'step1') {
+      setTimeout(() => setStep('step2'), 280);
+    }
+  }
+
+  function closeEventModal() {
+    const ev = activeEventUid ? getEventByUid(activeEventUid) : null;
+    let changed = false;
+
+    if (ev && !ev.confirmed && !ev.def.instantSettle) {
+      ev.slots.forEach(function (slot) {
+        if (slot.cards.length && !slot.fixedCard) {
+          slot.cards.forEach(c => addToHand(c, 1));
+          slot.cards = [];
+          changed = true;
+        }
+      });
+    }
+
+    modal.classList.remove('open');
+    mapDim.classList.remove('open');
+    activeEventUid = null;
+
+    nextDayBtn.disabled = false;
+
+    if (changed) renderHand();
+  }
+
+  function renderEventSlots(ev) {
+    slotColumn.innerHTML = '';
+    slotColumn.classList.toggle('slot-column-2x2', ev.def.id === 'zhuojian');
+    ev.slots.forEach(function (slot, idx) {
+      const wrapper = el('div', 'slot-wrapper');
+      wrapper.appendChild(el('div', 'slot-label', slot.label));
+
+      const slotEl = el('div', 'slot');
+      slotEl.dataset.slotIdx = idx;
+
+      /* 大郎被隐藏时（仅炊饼摊受此影响；复仇与捉奸自身显示大郎） */
+      const hideFixed = slot.fixedCard === 'dalan' && dalanHidden && ev.def.id !== 'fuchou' && ev.def.id !== 'zhuojian';
+
+      if (slot.fixedCard && !hideFixed) {
+        slotEl.classList.add('filled', 'locked');
+        const cardEl = createCardEl(slot.fixedCard);
+        cardEl.setAttribute('draggable', 'false');
+        cardEl.addEventListener('click', function (e) {
+          e.stopPropagation();
+          openCardModal(slot.fixedCard);
+        });
+        slotEl.appendChild(cardEl);
+      } else if (hideFixed) {
+        /* 大郎暂离：空槽但不影响事件执行 */
+        slotEl.classList.add('absent');
+        slotEl.appendChild(el('span', 'slot-hint', '暂 离'));
+      } else if (slot.cards.length > 0) {
+        slotEl.classList.add('filled');
+        if (ev.confirmed) slotEl.classList.add('locked');
+
+        const cardEl = createCardEl(slot.cards[0]);
+        cardEl.setAttribute('draggable', ev.confirmed ? 'false' : 'true');
+
+        if (slot.cards.length > 1) {
+          const badge = el('div', 'stack-count', String(slot.cards.length));
+          badge.title = '槽中卡牌数量';
+          cardEl.appendChild(badge);
+        }
+
+        if (!ev.confirmed) {
+          cardEl.addEventListener('dragstart', function (e) {
+            dragState.source = 'slot';
+            dragState.eventUid = ev.uid;
+            dragState.slotIdx = idx;
+            dragState.defId = slot.cards[0];
+            dragState.handled = false;
+            e.dataTransfer.setData('text/plain', slot.cards[0]);
+            e.dataTransfer.effectAllowed = 'move';
+            cardEl.classList.add('dragging');
+          });
+
+          cardEl.addEventListener('dragend', function () {
+            cardEl.classList.remove('dragging');
+            if (!dragState.handled && dragState.source === 'slot') {
+              returnSlotCardToHand(ev.uid, idx, false);
+            }
+            dragState.source = null;
+            dragState.handled = false;
+          });
+        }
+
+        cardEl.addEventListener('click', function (e) {
+          e.stopPropagation();
+          openCardModal(slot.cards[0]);
+        });
+
+        slotEl.appendChild(cardEl);
+      } else {
+        if (slot.required) {
+          slotEl.classList.add('required-empty');
+        }
+        slotEl.appendChild(el('span', 'slot-hint', '空'));
+      }
+
+      slotEl.addEventListener('dragover', function (e) {
+        if (ev.confirmed) return;
+        if (slot.fixedCard) return;
+        const defId = dragState.defId;
+        if (!defId) return;
+
+        if (slot.cards.length >= (slot.maxCount || 1)) return;
+
+        if (dragState.source === 'slot' && dragState.eventUid === ev.uid && dragState.slotIdx === idx) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          return;
+        }
+
+        const valid = isValidCardForSlot(defId, slot);
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        slotEl.classList.add('over');
+        if (!valid) slotEl.classList.add('invalid');
+        else slotEl.classList.remove('invalid');
+      });
+
+      slotEl.addEventListener('dragleave', function (e) {
+        if (!slotEl.contains(e.relatedTarget)) {
+          slotEl.classList.remove('over', 'invalid');
+        }
+      });
+
+      slotEl.addEventListener('drop', function (e) {
+        e.preventDefault();
+        slotEl.classList.remove('over', 'invalid');
+        if (ev.confirmed) return;
+        if (slot.fixedCard) return;
+
+        const defId = dragState.defId;
+        if (!defId) return;
+
+        if (dragState.source === 'slot' && dragState.eventUid === ev.uid && dragState.slotIdx === idx) {
+          dragState.handled = true;
+          return;
+        }
+
+        if (slot.cards.length >= (slot.maxCount || 1)) return;
+        if (!isValidCardForSlot(defId, slot)) return;
+
+        dragState.handled = true;
+
+        if (dragState.source === 'hand') {
+          removeFromHand(defId, 1);
+          slot.cards.push(defId);
+          slot.filledThisTurn = true;
+        } else if (dragState.source === 'slot') {
+          const srcEvent = getEventByUid(dragState.eventUid);
+          if (!srcEvent) return;
+          const srcSlot = srcEvent.slots[dragState.slotIdx];
+          if (!srcSlot || !srcSlot.cards.length) return;
+          const movedCard = srcSlot.cards.shift();
+          srcSlot.filledThisTurn = false;
+          slot.cards.push(movedCard);
+          slot.filledThisTurn = true;
+        }
+
+        renderHand();
+        renderEventSlots(ev);
+        updateConfirmButton(ev);
+
+        if (guide.step === 'step2') {
+          const allRequiredFilled = ev.slots.every(s => !s.required || s.fixedCard || s.cards.length >= (s.maxCount || 1));
+          if (allRequiredFilled) {
+            setTimeout(function () { setStep('step3'); }, 150);
+          }
+        }
+      });
+
+      wrapper.appendChild(slotEl);
+      slotColumn.appendChild(wrapper);
+    });
+  }
+
+  function isValidCardForSlot(defId, slot) {
+    const def = CARD_DEFS[defId];
+    if (!def) return false;
+
+    if (slot.allowedNames && slot.allowedNames.length) {
+      return slot.allowedNames.indexOf(def.name) !== -1;
+    }
+
+    if (slot.allowedName) {
+      return def.name === slot.allowedName;
+    }
+
+    const slotType = slot.type;
+    if (slotType === 'person') {
+      return def.tags.indexOf('人物') !== -1;
+    }
+    if (slotType === 'fruit') {
+      return def.tags.indexOf('果品') !== -1;
+    }
+    if (slotType === 'food') {
+      return def.tags.indexOf('食物') !== -1;
+    }
+    if (slotType === 'coin') {
+      return def.name === '铜钱';
+    }
+    return true;
+  }
+
+  function returnSlotCardToHand(eventUid, slotIdx, log) {
+    const ev = getEventByUid(eventUid);
+    if (!ev) return;
+    const slot = ev.slots[slotIdx];
+    if (!slot || !slot.cards.length) return;
+
+    const defId = slot.cards.shift();
+    slot.filledThisTurn = false;
+    addToHand(defId, 1);
+
+    renderHand();
+    renderEventSlots(ev);
+    updateConfirmButton(ev);
+  }
+
+  function canConfirm(ev) {
+    return ev.slots.every(s => {
+      if (!s.required) return true;
+      /* 固定卡永远视为已填充（大郎暂离也视为已填充，事件可正常执行） */
+      if (s.fixedCard) return true;
+      return s.cards.length >= (s.maxCount || 1);
+    });
+  }
+
+  function updateConfirmButton(ev) {
+    const allRequiredFilled = canConfirm(ev);
+
+    if (ev.confirmed) {
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = '取 消 确 认';
+      confirmBtn.classList.add('done');
+    } else {
+      confirmBtn.disabled = !allRequiredFilled;
+      confirmBtn.textContent = '确 认';
+      confirmBtn.classList.remove('done');
+    }
+  }
+
+  confirmBtn.addEventListener('click', function () {
+    const ev = getEventByUid(activeEventUid);
+    if (!ev) return;
+
+    if (ev.def.instantSettle) {
+      if (!canConfirm(ev)) return;
+
+      const texts = (typeof ev.def.resultTexts === 'function')
+        ? ev.def.resultTexts(ev)
+        : ev.def.resultTexts;
+
+      startTextSequence(texts, ev.def.name, function () {
+        const outcome = applySettlement(ev);
+        if (outcome && outcome.handled) {
+          closeEventModal();
+        } else {
+          renderEventSlots(ev);
+          updateConfirmButton(ev);
+        }
+      });
+      return;
+    }
+
+    if (ev.confirmed) {
+      ev.confirmed = false;
+      showToast('已取消确认，可重新调整卡牌。');
+      renderEvents();
+      renderEventSlots(ev);
+      updateConfirmButton(ev);
+    } else {
+      if (!canConfirm(ev)) return;
+      ev.confirmed = true;
+      showToast('卡牌已置入，此事暂告段落。');
+      renderEvents();
+      renderEventSlots(ev);
+      updateConfirmButton(ev);
+
+      if (guide.step === 'step3') setTimeout(() => setStep('step4'), 120);
+    }
+  });
+
+  function spawnEvent(defId, silent) {
+    const def = EVENT_DEFS[defId];
+    if (!def) return;
+
+    const ev = {
+      uid: state.nextEventUid++,
+      def: def,
+      countdown: def.timing === 'timed' ? def.duration : null,
+      slots: def.slots.map(s => ({
+        type: s.type,
+        label: s.label,
+        required: s.required === true,
+        fixedCard: s.fixedCard || null,
+        allowedName: s.allowedName || null,
+        allowedNames: s.allowedNames || null,
+        maxCount: s.maxCount || 1,
+        cards: [],
+        filledThisTurn: false
+      })),
+      confirmed: false,
+      done: false
+    };
+
+    state.events.push(ev);
+    renderEvents();
+
+    if (defId === 'fuchou' || defId === 'zhuojian') {
+      dalanHidden = true;
+      if (activeEventUid) {
+        const activeEv = getEventByUid(activeEventUid);
+        if (activeEv && activeEv.def.id === 'cuibingtan') {
+          renderEventSlots(activeEv);
+          updateConfirmButton(activeEv);
+        }
+      }
+    }
+
+    if (!silent) {
+      addLog('事件' + def.name + '出现。', dayLabel(state.day), 'accent');
+    }
+  }
+
+  function applySettlement(ev) {
+    const outcome = ev.def.settle(ev);
+
+    if (outcome.returns) {
+      outcome.returns.forEach(defId => addToHand(defId, 1));
+    }
+
+    if (outcome.losses) {
+      const lossCount = {};
+      outcome.losses.forEach(defId => {
+        lossCount[defId] = (lossCount[defId] || 0) + 1;
+      });
+      Object.keys(lossCount).forEach(defId => {
+        const n = lossCount[defId];
+        const suffix = n > 1 ? '×' + n : '';
+        addLog('失去' + CARD_DEFS[defId].name + suffix + '。', dayLabel(state.day), 'warn');
+      });
+    }
+
+    if (outcome.gains) {
+      const gainCount = {};
+      outcome.gains.forEach(defId => {
+        gainCount[defId] = (gainCount[defId] || 0) + 1;
+      });
+      Object.keys(gainCount).forEach(defId => {
+        const n = gainCount[defId];
+        addToHand(defId, n);
+        const suffix = n > 1 ? '×' + n : '';
+        addLog('获得' + CARD_DEFS[defId].name + suffix + '。', dayLabel(state.day), 'accent');
+      });
+    }
+
+    renderHand();
+
+    if (outcome.transformTo) {
+      if (ev.def.id === 'chafengzhuoying1') chafengProgress = 1;
+      else if (ev.def.id === 'chafengzhuoying2') chafengProgress = 2;
+
+      const idx = state.events.indexOf(ev);
+      if (idx !== -1) state.events.splice(idx, 1);
+      renderEvents();
+      spawnEvent(outcome.transformTo, true);
+      outcome.handled = true;
+    }
+    else if (outcome.despawn) {
+      if (ev.def.id === 'chafengzhuoying3') {
+        chafengProgress = 3;
+        pendingKuanghuan = true;
+      }
+      addLog('事件' + ev.def.name + '消失。', dayLabel(state.day), 'warn');
+      const idx = state.events.indexOf(ev);
+      if (idx !== -1) state.events.splice(idx, 1);
+      renderEvents();
+      outcome.handled = true;
+    }
+
+    return outcome;
+  }
+
+  function despawnEvent(ev) {
+    ev.slots.forEach(slot => {
+      if (slot.cards.length) {
+        slot.cards.forEach(c => addToHand(c, 1));
+        slot.cards = [];
+        slot.filledThisTurn = false;
+      }
+    });
+
+    const idx = state.events.indexOf(ev);
+    if (idx !== -1) state.events.splice(idx, 1);
+
+    renderEvents();
+    addLog('事件' + ev.def.name + '消失。', dayLabel(state.day), 'warn');
+
+    if (ev.def.id === 'fuchou' || ev.def.id === 'zhuojian') {
+      if (!dalanGoneForever) dalanHidden = false;
+      if (activeEventUid) {
+        const activeEv = getEventByUid(activeEventUid);
+        if (activeEv && activeEv.def.id === 'cuibingtan') {
+          renderEventSlots(activeEv);
+          updateConfirmButton(activeEv);
+        }
+      }
+    }
+
+    if (ev.def.onDespawn) {
+      ev.def.onDespawn(ev);
+    }
+  }
+
+  function openCardModal(defId) {
+    const def = CARD_DEFS[defId];
+    if (!def) return;
+    cardModalName.textContent = def.name;
+    cardModalInfo.textContent = def.info;
+
+    renderCardModalAttrs(def);
+
+    cardModalTags.innerHTML = '';
+    def.tags.forEach(t => {
+      cardModalTags.appendChild(el('span', 'card-tag', t));
+    });
+
+    cardModalOverlay.classList.add('open');
+  }
+
+  cardModalOverlay.addEventListener('click', function (e) {
+    if (e.target === cardModalOverlay) cardModalOverlay.classList.remove('open');
+  });
+
+  function resetTextModalButtons() {
+    textModalFooter.querySelectorAll('.btn.custom').forEach(b => b.remove());
+    textModalConfirm.style.display = '';
+  }
+
+  function startTextSequence(texts, eventName, onComplete) {
+    if (!texts || !texts.length) { if (onComplete) onComplete(); return; }
+    resetTextModalButtons();
+    textSeq.texts = texts.slice();
+    textSeq.index = 0;
+    textSeq.eventName = eventName || '';
+    textSeq.onComplete = onComplete;
+    showTextModal();
+  }
+
+  function showTextModal() {
+    const raw = textSeq.texts[textSeq.index];
+    textModalBody.textContent = raw.replace(/\n/g, '\n\n');
+    textModalBody.scrollTop = 0;
+
+    if (textSeq.eventName) {
+      textModalName.textContent = textSeq.eventName;
+      textModalName.classList.add('show');
+    } else {
+      textModalName.textContent = '';
+      textModalName.classList.remove('show');
+    }
+
+    textModalOverlay.classList.add('open');
+  }
+
+  function advanceTextModal() {
+    textSeq.index += 1;
+    if (textSeq.index >= textSeq.texts.length) {
+      textModalOverlay.classList.remove('open');
+      const cb = textSeq.onComplete;
+      textSeq.texts = [];
+      textSeq.index = 0;
+      textSeq.eventName = '';
+      textSeq.onComplete = null;
+      if (cb) setTimeout(cb, 220);
+    } else {
+      showTextModal();
+    }
+  }
+
+  textModalConfirm.addEventListener('click', advanceTextModal);
+
+  function showChoiceModal(text, buttons, eventName) {
+    textModalBody.textContent = text.replace(/\n/g, '\n\n');
+    textModalBody.scrollTop = 0;
+
+    if (eventName) {
+      textModalName.textContent = eventName;
+      textModalName.classList.add('show');
+    } else {
+      textModalName.textContent = '';
+      textModalName.classList.remove('show');
+    }
+
+    textModalConfirm.style.display = 'none';
+    textModalFooter.querySelectorAll('.btn.custom').forEach(b => b.remove());
+
+    buttons.forEach(function (btn) {
+      const button = document.createElement('button');
+      button.className = 'btn custom';
+      button.textContent = btn.label;
+      button.addEventListener('click', function () {
+        textModalOverlay.classList.remove('open');
+        resetTextModalButtons();
+        if (btn.onClick) setTimeout(btn.onClick, 250);
+      });
+      textModalFooter.appendChild(button);
+    });
+
+    textModalOverlay.classList.add('open');
+  }
+
+  function triggerEnding(titleText) {
+    textModalOverlay.classList.remove('open');
+    setTimeout(function () {
+      if (gameOverTitle) gameOverTitle.textContent = titleText;
+      gameOverOverlay.classList.add('open');
+    }, 300);
+  }
+
+  function triggerGameOver() {
+    triggerEnding('结局：饿死');
+  }
+
+  restartBtn.addEventListener('click', function () {
+    location.reload();
+  });
+
+  function onConceal() {
+    startTextSequence(
+      ['事不关己，何必自讨苦吃？\n西门官人时不时会给你点赏钱。'],
+      '',
+      function () {
+        addToHand('coin', 5);
+        addLog('获得铜钱×5。', dayLabel(state.day), 'accent');
+        renderHand();
+
+        schedulePopup(2, function () {
+          startTextSequence(['你听说卖炊饼的大郎病死了。'], '', function () {
+            schedulePopup(1, function () {
+              startTextSequence(['你听说都头二郎从外地回来。'], '', function () {
+                schedulePopup(1, function () {
+                  startTextSequence(
+                    ['气氛差不多到了，你也该死了。\n在向西门官人送果品的时候，你看见打虎英雄二郎的身影。\n那个身影的手上，已经提着一个人头了。\n你成为大郎的祭品之一。'],
+                    '',
+                    function () {
+                      triggerEnding('结局：祭品');
+                    }
+                  );
+                });
+              });
+            });
+          });
+        });
+      }
+    );
+  }
+
+  function onTell() {
+    pendingZhuojian = true;
+  }
+
+  nextDayBtn.addEventListener('click', function () {
+    if (modal.classList.contains('open')) return;
+
+    const confirmedEvents = state.events.filter(e => e.confirmed);
+
+    function playConfirmed(idx, onDone) {
+      if (idx >= confirmedEvents.length) { onDone(); return; }
+      const ev = confirmedEvents[idx];
+
+      const texts = (typeof ev.def.resultTexts === 'function')
+        ? ev.def.resultTexts(ev)
+        : ev.def.resultTexts;
+
+      startTextSequence(texts, ev.def.name, function () {
+        const outcome = applySettlement(ev);
+
+        if (ev.def.id === 'teahouse' && !outcome.despawn) {
+          teahouseDoneCount += 1;
+        }
+
+        if (outcome.nextEvent) {
+          pendingTeahouseOutcome = outcome.nextEvent;
+        }
+
+        if (ev.def.id === 'teahouse' && outcome.scheduleDecision) {
+          schedulePopup(2, function () {
+            showChoiceModal(
+              '现在你知道西门官人的苟且之事，你会告诉大郎吗？\n别忘了，你从西门官人那里得到过很多铜钱。',
+              [
+                { label: '隐瞒', onClick: onConceal },
+                { label: '告知', onClick: onTell }
+              ]
+            );
+          });
+        }
+
+        const isTeahouseRemove = ev.def.id === 'teahouse' && outcome.despawn;
+        const isXimenfu = ev.def.id === 'ximenfu';
+
+        function proceed() {
+          playConfirmed(idx + 1, onDone);
+        }
+
+        if (isXimenfu && outcome.triggerEnding) {
+          const idx2 = state.events.indexOf(ev);
+          if (idx2 !== -1) state.events.splice(idx2, 1);
+          renderEvents();
+
+          startTextSequence(
+            ['很遗憾这段传言与茶肆有关，而你已经与茶肆无关了。\n你没能参与这个故事。'],
+            '茶肆',
+            function () {
+              triggerEnding('结局：局外人');
+            }
+          );
+          return;
+        }
+
+        if (outcome.triggerEnding) {
+          const idx2 = state.events.indexOf(ev);
+          if (idx2 !== -1) state.events.splice(idx2, 1);
+          renderEvents();
+          triggerEnding('结局：' + outcome.triggerEnding);
+          return;
+        }
+
+        if (isTeahouseRemove) {
+          teahouseGone = true;
+          const idx2 = state.events.indexOf(ev);
+          if (idx2 !== -1) state.events.splice(idx2, 1);
+          renderEvents();
+          addLog('事件' + ev.def.name + '消失。', dayLabel(state.day), 'warn');
+
+          startTextSequence(
+            ['你后知后觉发现茶水是烫的。\n滚烫的水流在你脸上留下了痕迹。\n真是一道可怕的伤疤。'],
+            '茶肆',
+            function () {
+              modifyAttr('yun', 'cha', -1);
+              modifyAttr('yun', 'str', -1);
+              proceed();
+            }
+          );
+        } else if (!outcome.handled && (ev.def.repetition === 'once' || outcome.despawn)) {
+          despawnEvent(ev);
+          proceed();
+        } else {
+          proceed();
+        }
+      });
+    }
+
+    function afterAll() {
+      if (state.day > 1) {
+        const riceEvent = state.events.find(e => e.def.id === 'fanshigang');
+        if (riceEvent && !riceEvent.confirmed) {
+          const texts = riceEvent.def.despawnTexts || ['我以为你知道那个很简单的道理，现在你告诉我了，人不吃饭真的会死。'];
+          startTextSequence(texts, riceEvent.def.name, function () {
+            triggerGameOver();
+          });
+          return;
+        }
+      }
+
+      const toRemove = [];
+      state.events.forEach(function (ev) {
+        if (ev.def.timing === 'timed') {
+          ev.countdown -= 1;
+
+          const node = document.querySelector('.event-node[data-uid="' + ev.uid + '"]');
+          if (node) {
+            const cd = node.querySelector('.countdown');
+            if (cd) {
+              cd.textContent = ev.countdown;
+              cd.classList.remove('pulse');
+              void cd.offsetWidth;
+              cd.classList.add('pulse');
+            }
+          }
+
+          if (ev.countdown <= 0) toRemove.push(ev);
+        }
+      });
+
+      function processRemovals(list, cb) {
+        if (!list.length) { cb(); return; }
+        const ev = list.shift();
+        const texts = ev.def.despawnTexts;
+
+        function finish() {
+          despawnEvent(ev);
+          if (ev.def.onDespawnEnding) {
+            triggerEnding('结局：' + ev.def.onDespawnEnding);
+            return;
+          }
+          processRemovals(list, cb);
+        }
+
+        if (texts && texts.length) {
+          startTextSequence(texts, ev.def.name, finish);
+        } else {
+          finish();
+        }
+      }
+
+      processRemovals(toRemove, function () {
+        state.day += 1;
+        dayNum.textContent = state.day;
+
+        if (pendingZhengquDay !== null && state.day >= pendingZhengquDay) {
+          pendingZhengquDay = null;
+          spawnEvent('zhengqu');
+        }
+
+        if (state.day === 2) {
+          spawnEvent('teahouse');
+          spawnEvent('cuibingtan');
+          spawnEvent('fanshigang');
+          spawnEvent('chafengzhuoying1');
+        }
+
+        if (pendingKuanghuan) {
+          pendingKuanghuan = false;
+          kuanghuanAppeared = true;
+          kuanghuanSpawnDay = state.day;
+          spawnEvent('kuanghuan');
+        }
+
+        if (kuanghuanAppeared && !ximenfuSpawned && state.day === kuanghuanSpawnDay + 3) {
+          ximenfuSpawned = true;
+          spawnEvent('ximenfu');
+        }
+
+        if (pendingTeahouseOutcome) {
+          const evtId = pendingTeahouseOutcome;
+          pendingTeahouseOutcome = null;
+          spawnEvent(evtId);
+        }
+
+        if (pendingZhuojian) {
+          pendingZhuojian = false;
+          spawnEvent('zhuojian');
+        }
+
+        if (!kuanghuanAppeared && state.day > 1 && state.day % 2 === 1) {
+          const hasHotel = state.events.some(e => e.def.id === 'hotel');
+          if (!hasHotel) {
+            spawnEvent('hotel');
+          }
+        }
+
+        resetDayUI();
+
+        if (handCoinCount() >= 10) {
+          ['zhuangzao', 'xueyuan', 'xiwu'].forEach(function (id) {
+            if (!isEventOnMap(id)) {
+              spawnEvent(id);
+            }
+          });
+        }
+
+        if (guide.step === 'step5') setStep('free');
+        showToast('新的回合开始了。');
+
+        if (teahouseDoneCount >= 5 && isTeahousePresent() && !teahouseCharmBonusGiven) {
+          teahouseCharmBonusGiven = true;
+          setTimeout(function () {
+            startTextSequence(
+              ['你曾听说喝茶有养颜作用，有点相信。\n不管怎样，你的魅力上升了。'],
+              '茶肆',
+              function () {
+                modifyAttr('yun', 'cha', 1);
+              }
+            );
+          }, 500);
+        }
+
+        processScheduledPopups();
+      });
+    }
+
+    if (confirmedEvents.length === 0) {
+      startTextSequence(['你这一回合没有做任何事。'], '', function () { afterAll(); });
+    } else {
+      playConfirmed(0, function () { afterAll(); });
+    }
+  });
+
+  function resetDayUI() {
+    state.events.forEach(function (ev) {
+      ev.confirmed = false;
+      ev.slots.forEach(s => { s.filledThisTurn = false; });
+    });
+    renderEvents();
+
+    confirmBtn.classList.remove('done');
+    confirmBtn.textContent = '确 认';
+    confirmBtn.disabled = true;
+
+    closeEventModal();
+    renderHand();
+  }
+
+  modalClose.addEventListener('click', function () {
+    closeEventModal();
+    if (guide.step === 'step4') setStep('step5');
+  });
+
+  mapDim.addEventListener('click', function () {
+    if (guide.step === 'step4') { showWarn(); return; }
+    closeEventModal();
+  });
+
+  renderHand();
+  renderEvents();
+
+  introOverlay.classList.add('open');
+
+  introClose.addEventListener('click', function () {
+    introOverlay.classList.remove('open');
+    setTimeout(function () {
+      addLog('获得郓哥。', dayLabel(state.day), 'accent');
+      addLog('获得雪梨×5。', dayLabel(state.day), 'accent');
+
+      spawnEvent('hotel');
+      setStep('step1');
+    }, 420);
+  });
+
+})();
+</script>
+</body>
+</html>
